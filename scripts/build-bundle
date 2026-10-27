@@ -1,0 +1,258 @@
+#!/usr/bin/env bash
+# Assemble a Helm umbrella chart from member charts already built by `yarn publish-pkgs`.
+#
+# Two ways to call it:
+#
+#   Explicit - every field passed in. This is the contract a build pipeline uses,
+#   e.g. `publish -B` shelling out once per bundle (§7.1):
+#
+#     ./scripts/build-bundle \
+#       -n security-ui-exts -V 1.0.0 \
+#       -D "SUSE Security" \
+#       -d "Vulnerability scanning and runtime enforcement for Rancher Manager" \
+#       -i "https://.../icon.svg" \
+#       -a '{"catalog.cattle.io/prime-only":"true"}' \
+#       -p vulnerability-scanner,runtime-enforcer
+#
+#   Resolved - read the entry from `rancher.bundles[]` in the root package.json (§7.2)
+#   and hand it to the explicit path:
+#
+#     ./scripts/build-bundle -b                    # first bundle defined
+#     ./scripts/build-bundle -b security-ui-exts   # by name
+#
+# Options:
+#   -k    keep standalone member charts in assets/ (default: drop them, §3.7)
+#   -S    fail instead of warn when a member's compatibility range differs
+#
+# Section references are to extension-bundling-umbrella-chart.md.
+# bash 3.2 compatible (macOS /bin/bash).
+set -eo pipefail
+
+CYAN="\033[96m"; YELLOW="\033[93m"; RED="\033[91m"; RESET="\033[0m"; BOLD="\033[1m"
+
+BASE_DIR="$(pwd)"
+CHARTS="${BASE_DIR}/charts"
+ASSETS="${BASE_DIR}/assets"
+PKG_JSON="${BASE_DIR}/package.json"
+
+NAME=""; VERSION=""; DISPLAY_NAME=""; DESC=""; ICON=""
+ANNOTATIONS="{}"; PACKAGES_CSV=""; FROM_MANIFEST=""; RESOLVE="false"
+BUNDLE_ONLY="true"; STRICT="false"
+
+# Gating annotations - what isSupportedChartVersion actually reads (§6.4)
+GATING="catalog.cattle.io/rancher-version
+catalog.cattle.io/ui-extensions-version
+catalog.cattle.io/kube-version"
+
+# Member-identifying - never overlaid from the bundle onto a member (§6.4)
+NO_OVERLAY='["catalog.cattle.io/display-name","catalog.cattle.io/icon"]'
+
+usage() {
+  sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'
+  exit 1
+}
+
+while getopts "n:V:D:d:i:a:p:bkSh" opt; do
+  case $opt in
+    n) NAME="${OPTARG}" ;;
+    V) VERSION="${OPTARG}" ;;
+    D) DISPLAY_NAME="${OPTARG}" ;;
+    d) DESC="${OPTARG}" ;;
+    i) ICON="${OPTARG}" ;;
+    a) ANNOTATIONS="${OPTARG}" ;;
+    p) PACKAGES_CSV="${OPTARG}" ;;
+    b) RESOLVE="true" ;;
+    k) BUNDLE_ONLY="false" ;;
+    S) STRICT="true" ;;
+    *) usage ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+# `-b` takes its optional bundle name as a positional, so that a bare `-b` works
+FROM_MANIFEST="${1:-}"
+
+[ -f "${PKG_JSON}" ] || { echo -e "${RED}run from the repo root${RESET}"; exit 1; }
+for c in jq helm; do
+  command -v "$c" >/dev/null || { echo -e "${RED}need ${c} on PATH${RESET}"; exit 1; }
+done
+
+# ---------------------------------------------------------------- resolve mode
+if [ "${RESOLVE}" = "true" ]; then
+  BUNDLE=$(jq -c --arg n "${FROM_MANIFEST}" \
+    '(.rancher.bundles // []) | if $n == "" then .[0] else (map(select(.name == $n)) | .[0]) end' \
+    "${PKG_JSON}")
+
+  if [ -z "${BUNDLE}" ] || [ "${BUNDLE}" = "null" ]; then
+    echo -e "${RED}no bundle${FROM_MANIFEST:+ named '${FROM_MANIFEST}'} in rancher.bundles[]${RESET}"
+    exit 1
+  fi
+
+  NAME=$(jq -r '.name'                      <<<"${BUNDLE}")
+  VERSION=$(jq -r '.version'                <<<"${BUNDLE}")
+  DISPLAY_NAME=$(jq -r '.displayName // ""' <<<"${BUNDLE}")
+  DESC=$(jq -r '.description // ""'         <<<"${BUNDLE}")
+  ICON=$(jq -r '.icon // ""'                <<<"${BUNDLE}")
+  ANNOTATIONS=$(jq -c '.annotations // {}'  <<<"${BUNDLE}")
+  PACKAGES_CSV=$(jq -r '.packages | join(",")' <<<"${BUNDLE}")
+fi
+
+# ------------------------------------------------------------------- validate
+[ -n "${NAME}" ]         || { echo -e "${RED}-n <name> is required${RESET}"; usage; }
+[ -n "${VERSION}" ]      || { echo -e "${RED}-V <version> is required${RESET}"; usage; }
+[ -n "${PACKAGES_CSV}" ] || { echo -e "${RED}-p <pkg,pkg> is required${RESET}"; usage; }
+
+jq -e 'type == "object"' <<<"${ANNOTATIONS}" >/dev/null 2>&1 || {
+  echo -e "${RED}-a must be a JSON object, got: ${ANNOTATIONS}${RESET}"; exit 1; }
+
+# §7.3 - a bundle name matching a pkg/ dir makes release tags ambiguous
+if [ -d "${BASE_DIR}/pkg/${NAME}" ]; then
+  echo -e "${RED}bundle name '${NAME}' collides with pkg/${NAME}${RESET}"
+  exit 1
+fi
+
+# csv -> space-delimited list, bash 3.2 safe (no mapfile)
+PACKAGES=""
+OLD_IFS="${IFS}"; IFS=','
+for p in ${PACKAGES_CSV}; do
+  p=$(echo "${p}" | tr -d '[:space:]')
+  if [ -n "${p}" ]; then PACKAGES="${PACKAGES}${p} "; fi
+done
+IFS="${OLD_IFS}"
+
+echo -e "${CYAN}${BOLD}Building bundle ${NAME}-${VERSION}${RESET}"
+if [ "${RESOLVE}" = "true" ]; then
+  echo -e "${CYAN}  Source      : rancher.bundles[] in package.json${RESET}"
+else
+  echo -e "${CYAN}  Source      : command line${RESET}"
+fi
+echo -e "${CYAN}  Members     : ${PACKAGES}${RESET}"
+echo -e "${CYAN}  Bundle only : ${BUNDLE_ONLY}${RESET}"
+
+DEST="${CHARTS}/${NAME}/${VERSION}"
+rm -rf "${DEST}"
+mkdir -p "${DEST}/charts"
+
+# ------------------------------------------- vendor members + validate ranges
+DEPS=""
+MEMBER_LIST=""
+PROBLEMS=0
+
+for m in ${PACKAGES}; do
+  MPKG="${BASE_DIR}/pkg/${m}/package.json"
+  [ -f "${MPKG}" ] || { echo -e "${RED}no such package: pkg/${m}${RESET}"; exit 1; }
+
+  MVER=$(jq -r '.version' "${MPKG}")
+  SRC="${CHARTS}/${m}/${MVER}"
+
+  if [ ! -d "${SRC}" ]; then
+    echo -e "${RED}member chart missing: charts/${m}/${MVER}${RESET}"
+    echo -e "${YELLOW}build members first:${RESET}"
+    echo -e "${YELLOW}  yarn publish-pkgs -s <owner>/<repo> -b gh-pages ${PACKAGES}${RESET}"
+    exit 1
+  fi
+
+  # §6.3 - the bundle declares its own ranges and a member must not be laxer.
+  # Proper semver-subset checking needs a semver library, so this compares
+  # literally and surfaces any difference for a human to judge.
+  while IFS= read -r key; do
+    [ -n "${key}" ] || continue
+    BV=$(jq -r --arg k "${key}" '.[$k] // ""' <<<"${ANNOTATIONS}")
+    MV=$(jq -r --arg k "${key}" '.rancher.annotations[$k] // ""' "${MPKG}")
+    if [ -n "${MV}" ] && [ "${MV}" != "${BV}" ]; then
+      echo -e "${YELLOW}  ! ${m}: ${key}${RESET}"
+      echo -e "${YELLOW}      bundle='${BV}'  member='${MV}' - check the member is not laxer${RESET}"
+      PROBLEMS=$((PROBLEMS + 1))
+    fi
+  done <<EOF
+${GATING}
+EOF
+
+  echo -e "  + vendoring ${m} ${MVER}"
+  cp -R "${SRC}" "${DEST}/charts/${m}"
+
+  DEPS="${DEPS}  - name: ${m}
+    version: ${MVER}
+    condition: ${m}.enabled
+"
+  MEMBER_LIST="${MEMBER_LIST}${m},"
+done
+MEMBER_LIST="${MEMBER_LIST%,}"
+
+if [ "${PROBLEMS}" -gt 0 ] && [ "${STRICT}" = "true" ]; then
+  echo -e "${RED}${PROBLEMS} range mismatch(es) and -S was given${RESET}"
+  exit 1
+fi
+
+# ------------------ parent Chart.yaml - the only gating annotations (§6.4) ---
+CHART_ANNOTATIONS=$(jq -nr \
+  --argjson user "${ANNOTATIONS}" \
+  --arg dn "${DISPLAY_NAME}" \
+  --arg members "${MEMBER_LIST}" '
+  {
+    "catalog.cattle.io/certified":    "rancher",
+    "catalog.cattle.io/namespace":    "cattle-ui-plugin-system",
+    "catalog.cattle.io/os":           "linux",
+    "catalog.cattle.io/permits-os":   "linux, windows",
+    "catalog.cattle.io/scope":        "management",
+    "catalog.cattle.io/ui-component": "plugins"
+  }
+  + $user
+  + (if $dn == "" then {} else { "catalog.cattle.io/display-name": $dn } end)
+  + { "catalog.cattle.io/ui-extensions-bundle-members": $members }
+  | to_entries[] | "  \(.key): \"\(.value)\""')
+
+{
+  echo "apiVersion: v2"
+  echo "type: application"
+  echo "name: ${NAME}"
+  echo "version: ${VERSION}"
+  echo "appVersion: \"${VERSION}\""
+  if [ -n "${DESC}" ]; then echo "description: ${DESC}"; fi
+  if [ -n "${ICON}" ]; then echo "icon: ${ICON}"; fi
+  echo "annotations:"
+  echo "${CHART_ANNOTATIONS}"
+  echo "dependencies:"
+  printf '%s' "${DEPS}"
+} > "${DEST}/Chart.yaml"
+
+# ------------ parent values.yaml - only what the parent alone knows (§6.2) ---
+{
+  echo "# Hoisted so InstallExtensionDialog can read plugin.noAuth at the root (§5.5)"
+  echo "plugin:"
+  echo "  noAuth: false"
+  for m in ${PACKAGES}; do
+    echo ""
+    echo "${m}:"
+    echo "  enabled: true"
+    echo "  fullnameOverride: ${m}        # REQUIRED - §3.4"
+    echo "  plugin:"
+    echo "    metadata:"
+    echo "      catalog.cattle.io/ui-extensions-bundle: \"${NAME}\""
+    # Overlay the bundle's annotations minus member-identifying ones. Deep-merges
+    # with the member's own plugin.metadata written by helm/scripts/patch (§4).
+    jq -r --argjson skip "${NO_OVERLAY}" \
+      'to_entries[] | select(.key as $k | $skip | index($k) | not)
+       | "      \(.key): \"\(.value)\""' <<<"${ANNOTATIONS}"
+  done
+} > "${DEST}/values.yaml"
+
+# ------------------------------------------------------------ package + index
+if [ "${BUNDLE_ONLY}" = "true" ]; then
+  echo -e "${CYAN}Dropping standalone member charts so the catalog has one entry (§3.7)${RESET}"
+  for m in ${PACKAGES}; do rm -rf "${ASSETS:?}/${m}"; done
+  rm -f "${BASE_DIR}/index.yaml" "${ASSETS}/index.yaml"
+fi
+
+mkdir -p "${ASSETS}/${NAME}"
+helm package "${DEST}" -d "${ASSETS}/${NAME}"
+
+if [ -f "${BASE_DIR}/index.yaml" ]; then
+  helm repo index "${ASSETS}" --url assets/ --merge "${BASE_DIR}/index.yaml"
+else
+  helm repo index "${ASSETS}" --url assets/
+fi
+cp "${ASSETS}/index.yaml" "${BASE_DIR}/index.yaml"
+
+echo -e "${CYAN}${BOLD}Done: assets/${NAME}/${NAME}-${VERSION}.tgz${RESET}"
+echo -e "${CYAN}Verify: helm template ${NAME} ${DEST} -n cattle-ui-plugin-system${RESET}"

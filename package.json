@@ -5,6 +5,27 @@
   "engines": {
     "node": ">=24"
   },
+  "rancher": {
+    "bundles": [
+      {
+        "name": "security-ui-exts",
+        "version": "1.0.0",
+        "displayName": "SUSE Security",
+        "description": "Vulnerability scanning and runtime enforcement for Rancher Manager",
+        "icon": "https://raw.githubusercontent.com/rancher/security-ui-exts/main/pkg/vulnerability-scanner/assets/img/icon-vulnerability-scanner.svg",
+        "packages": [
+          "vulnerability-scanner",
+          "runtime-enforcer"
+        ],
+        "annotations": {
+          "catalog.cattle.io/kube-version": ">= v1.16.0-0",
+          "catalog.cattle.io/rancher-version": ">= 2.11.0-0",
+          "catalog.cattle.io/ui-extensions-version": ">= 3.0.0 < 4.0.0",
+          "catalog.cattle.io/prime-only": "true"
+        }
+      }
+    ]
+  },
   "dependencies": {
     "@rancher/components": "^0.3.0-alpha.4",
     "@rancher/shell": "3.0.13",
@@ -63,6 +84,7 @@
     "build-pkg": "./node_modules/@rancher/shell/scripts/build-pkg.sh",
     "serve-pkgs": "./node_modules/@rancher/shell/scripts/serve-pkgs",
     "publish-pkgs": "./node_modules/@rancher/shell/scripts/extension/publish",
+    "build-bundle": "./scripts/build-bundle",
     "parse-tag-name": "./node_modules/@rancher/shell/scripts/extension/parse-tag-name",
     "test:ci": "jest --collectCoverage",
     "test:unit": "jest --watch --collectCoverage",
