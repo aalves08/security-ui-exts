@@ -1,120 +1,70 @@
 apiVersion: v1
 entries:
-  runtime-enforcer:
-  - annotations:
-      catalog.cattle.io/certified: rancher
-      catalog.cattle.io/display-name: SUSE Security Runtime Enforcer
-      catalog.cattle.io/hidden: "true"
-      catalog.cattle.io/kube-version: '>= v1.16.0-0'
-      catalog.cattle.io/namespace: cattle-ui-plugin-system
-      catalog.cattle.io/os: linux
-      catalog.cattle.io/permits-os: linux, windows
-      catalog.cattle.io/prime-only: "true"
-      catalog.cattle.io/rancher-version: '>= 2.11.0-0'
-      catalog.cattle.io/scope: management
-      catalog.cattle.io/ui-component: plugins
-      catalog.cattle.io/ui-extensions-version: '>= 3.0.0 < 4.0.0'
-    apiVersion: v2
-    appVersion: 0.1.1
-    created: "2026-10-28T12:18:38.774654Z"
-    description: SUSE Security Runtime Enforcer extension for Rancher Manager
-    digest: 7a7f4c785a904e5ac152e90191cb9b20d741cb9acd727b134e9f0d8765fa7843
-    icon: https://raw.githubusercontent.com/rancher/security-ui-exts/main/pkg/runtime-enforcer/assets/img/runtime-enforcer-logo.svg
-    name: runtime-enforcer
-    type: application
-    urls:
-    - assets/runtime-enforcer/runtime-enforcer-0.1.1.tgz
-    version: 0.1.1
   security-ui-exts:
-  - annotations:
-      catalog.cattle.io/certified: rancher
-      catalog.cattle.io/display-name: SUSE Security
-      catalog.cattle.io/kube-version: '>= v1.16.0-0'
-      catalog.cattle.io/namespace: cattle-ui-plugin-system
-      catalog.cattle.io/os: linux
-      catalog.cattle.io/permits-os: linux, windows
-      catalog.cattle.io/prime-only: "true"
-      catalog.cattle.io/rancher-version: '>= 2.11.0-0'
-      catalog.cattle.io/scope: management
-      catalog.cattle.io/ui-component: plugins
-      catalog.cattle.io/ui-extensions-bundle-members: vulnerability-scanner,runtime-enforcer
-      catalog.cattle.io/ui-extensions-version: '>= 3.0.0 < 4.0.0'
-    apiVersion: v2
-    appVersion: 1.0.1
-    created: "2026-10-28T12:18:38.77512Z"
-    dependencies:
-    - condition: vulnerability-scanner.enabled
-      name: vulnerability-scanner
-      repository: ""
-      version: 0.9.2
-    - condition: runtime-enforcer.enabled
-      name: runtime-enforcer
-      repository: ""
-      version: 0.1.1
-    description: Vulnerability scanning and runtime enforcement for Rancher Manager
-    digest: 3eac6a21b532dd3928ca57624fe84b1befd73b1c8d1cc66f37ffb3d069ece153
-    icon: https://raw.githubusercontent.com/rancher/security-ui-exts/main/pkg/vulnerability-scanner/assets/img/icon-vulnerability-scanner.svg
-    name: security-ui-exts
-    type: application
-    urls:
-    - assets/security-ui-exts/security-ui-exts-1.0.1.tgz
-    version: 1.0.1
-  - annotations:
-      catalog.cattle.io/certified: rancher
-      catalog.cattle.io/display-name: SUSE Security
-      catalog.cattle.io/kube-version: '>= v1.16.0-0'
-      catalog.cattle.io/namespace: cattle-ui-plugin-system
-      catalog.cattle.io/os: linux
-      catalog.cattle.io/permits-os: linux, windows
-      catalog.cattle.io/prime-only: "true"
-      catalog.cattle.io/rancher-version: '>= 2.11.0-0'
-      catalog.cattle.io/scope: management
-      catalog.cattle.io/ui-component: plugins
-      catalog.cattle.io/ui-extensions-bundle-members: vulnerability-scanner,runtime-enforcer
-      catalog.cattle.io/ui-extensions-version: '>= 3.0.0 < 4.0.0'
-    apiVersion: v2
-    appVersion: 1.0.0
-    created: "2026-10-27T16:07:49.88748Z"
-    dependencies:
-    - condition: vulnerability-scanner.enabled
-      name: vulnerability-scanner
-      repository: ""
-      version: 0.9.1
-    - condition: runtime-enforcer.enabled
-      name: runtime-enforcer
-      repository: ""
-      version: 0.1.0
-    description: Vulnerability scanning and runtime enforcement for Rancher Manager
-    digest: f304145657800a9da81ac72d0bfd30a6f7676739d298f697138398bc7e7400e1
-    icon: https://raw.githubusercontent.com/rancher/security-ui-exts/main/pkg/vulnerability-scanner/assets/img/icon-vulnerability-scanner.svg
-    name: security-ui-exts
-    type: application
-    urls:
-    - assets/security-ui-exts/security-ui-exts-1.0.0.tgz
-    version: 1.0.0
-  vulnerability-scanner:
-  - annotations:
-      catalog.cattle.io/certified: rancher
-      catalog.cattle.io/display-name: SUSE Security Vulnerability Scanner
-      catalog.cattle.io/hidden: "true"
-      catalog.cattle.io/kube-version: '>= v1.16.0-0'
-      catalog.cattle.io/namespace: cattle-ui-plugin-system
-      catalog.cattle.io/os: linux
-      catalog.cattle.io/permits-os: linux, windows
-      catalog.cattle.io/prime-only: "true"
-      catalog.cattle.io/rancher-version: '>= 2.11.0-0'
-      catalog.cattle.io/scope: management
-      catalog.cattle.io/ui-component: plugins
-      catalog.cattle.io/ui-extensions-version: '>= 3.0.0 < 4.0.0'
-    apiVersion: v2
-    appVersion: 0.9.2
-    created: "2026-10-28T12:18:38.775321Z"
-    description: SUSE Security Vulnerability Scanner extension for Rancher Manager
-    digest: b66a3d6d73a28806e85dd2a1bdee4312f6ba6eb4a52dce6ef0fe60e877ec085d
-    icon: https://raw.githubusercontent.com/rancher/security-ui-exts/main/pkg/vulnerability-scanner/assets/img/icon-vulnerability-scanner.svg
-    name: vulnerability-scanner
-    type: application
-    urls:
-    - assets/vulnerability-scanner/vulnerability-scanner-0.9.2.tgz
-    version: 0.9.2
-generated: "2026-10-28T12:18:38.773188Z"
+    - annotations:
+        catalog.cattle.io/certified: rancher
+        catalog.cattle.io/display-name: SUSE Security
+        catalog.cattle.io/kube-version: '>= v1.16.0-0'
+        catalog.cattle.io/namespace: cattle-ui-plugin-system
+        catalog.cattle.io/os: linux
+        catalog.cattle.io/permits-os: linux, windows
+        catalog.cattle.io/prime-only: "true"
+        catalog.cattle.io/rancher-version: '>= 2.11.0-0'
+        catalog.cattle.io/scope: management
+        catalog.cattle.io/ui-component: plugins
+        catalog.cattle.io/ui-extensions-bundle-members: vulnerability-scanner,runtime-enforcer
+        catalog.cattle.io/ui-extensions-version: '>= 3.0.0 < 4.0.0'
+      apiVersion: v2
+      appVersion: 1.0.1
+      created: "2026-10-28T12:24:36.74529Z"
+      dependencies:
+        - condition: vulnerability-scanner.enabled
+          name: vulnerability-scanner
+          repository: ""
+          version: 0.9.2
+        - condition: runtime-enforcer.enabled
+          name: runtime-enforcer
+          repository: ""
+          version: 0.1.1
+      description: Vulnerability scanning and runtime enforcement for Rancher Manager
+      digest: 2bb07fec2eaba91638e7ccee7dffcb46f44eb7714a1a9f600e186c89803e4a61
+      icon: https://raw.githubusercontent.com/rancher/security-ui-exts/main/pkg/vulnerability-scanner/assets/img/icon-vulnerability-scanner.svg
+      name: security-ui-exts
+      type: application
+      urls:
+        - assets/security-ui-exts/security-ui-exts-1.0.1.tgz
+      version: 1.0.1
+    - annotations:
+        catalog.cattle.io/certified: rancher
+        catalog.cattle.io/display-name: SUSE Security
+        catalog.cattle.io/kube-version: '>= v1.16.0-0'
+        catalog.cattle.io/namespace: cattle-ui-plugin-system
+        catalog.cattle.io/os: linux
+        catalog.cattle.io/permits-os: linux, windows
+        catalog.cattle.io/prime-only: "true"
+        catalog.cattle.io/rancher-version: '>= 2.11.0-0'
+        catalog.cattle.io/scope: management
+        catalog.cattle.io/ui-component: plugins
+        catalog.cattle.io/ui-extensions-bundle-members: vulnerability-scanner,runtime-enforcer
+        catalog.cattle.io/ui-extensions-version: '>= 3.0.0 < 4.0.0'
+      apiVersion: v2
+      appVersion: 1.0.0
+      created: "2026-10-27T16:07:49.88748Z"
+      dependencies:
+        - condition: vulnerability-scanner.enabled
+          name: vulnerability-scanner
+          repository: ""
+          version: 0.9.1
+        - condition: runtime-enforcer.enabled
+          name: runtime-enforcer
+          repository: ""
+          version: 0.1.0
+      description: Vulnerability scanning and runtime enforcement for Rancher Manager
+      digest: f304145657800a9da81ac72d0bfd30a6f7676739d298f697138398bc7e7400e1
+      icon: https://raw.githubusercontent.com/rancher/security-ui-exts/main/pkg/vulnerability-scanner/assets/img/icon-vulnerability-scanner.svg
+      name: security-ui-exts
+      type: application
+      urls:
+        - assets/security-ui-exts/security-ui-exts-1.0.0.tgz
+      version: 1.0.0
+generated: "2026-10-28T12:24:36.744752Z"
