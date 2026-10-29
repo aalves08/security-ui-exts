@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "@rancher/components": "^0.3.0-alpha.4",
-    "@rancher/shell": "3.0.13",
+    "@rancher/shell": "3.0.14",
     "file-saver": "^2.0.5",
     "papaparse": "^5.5.3",
     "vue": "^3.5.18",

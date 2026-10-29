@@ -7,6 +7,7 @@ const config: Config.InitialOptions = {
   modulePaths:            ['<rootDir>'],
   moduleFileExtensions:   ['js', 'json', 'vue', 'ts', 'tsx'],
   moduleNameMapper:       {
+    '^clipboard-polyfill$': '<rootDir>/node_modules/clipboard-polyfill/dist/es6/clipboard-polyfill.es6.js',
     '^~/(.*)$':    '<rootDir>/$1',
     '^~~/(.*)$':   '<rootDir>/$1',
     '^@/(.*)$':    '<rootDir>/$1',
@@ -25,7 +26,7 @@ const config: Config.InitialOptions = {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.json' }],
     '^.+\\.svg$':  '<rootDir>/tests/unit/config/svgTransform.ts' // to mock `*.svg` files
   },
-  transformIgnorePatterns:  ['/node_modules/(?!(@vue|@rancher|jsonpath-plus))'],
+  transformIgnorePatterns:  ['/node_modules/(?!(@vue|@rancher|jsonpath-plus|color|clipboard-polyfill))'],
   modulePathIgnorePatterns: [
     '<rootDir>/scripts/',
     '<rootDir>/assets/',
