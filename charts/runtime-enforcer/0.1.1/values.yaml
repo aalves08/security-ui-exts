@@ -4,9 +4,9 @@ plugin:
   enabled: true
   versionOverride: ""
   endpoint: >-
-    https://raw.githubusercontent.com/rancher/security-ui-exts/gh-pages/extensions/runtime-enforcer/0.1.1
+    https://raw.githubusercontent.com/aalves08/security-ui-exts/gh-pages/extensions/runtime-enforcer/0.1.1
   compressedEndpoint: >-
-    https://raw.githubusercontent.com/rancher/security-ui-exts/gh-pages/extensions/runtime-enforcer/0.1.1.tgz
+    https://raw.githubusercontent.com/aalves08/security-ui-exts/gh-pages/extensions/runtime-enforcer/0.1.1.tgz
   noCache: false
   noAuth: false
   metadata:
